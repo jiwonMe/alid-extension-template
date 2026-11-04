@@ -1,24 +1,24 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { build } from 'vite';
+import { createPackageManifest } from '../src/manifest.js';
+import { validateConfig } from './validate-config.mjs';
 
-const metadata = JSON.parse(await readFile(new URL('../extension.json', import.meta.url), 'utf8'));
-if (!/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/.test(metadata.id)) throw new Error('extension.json id must be a unique dotted namespace, e.g. yourname.sticky-notes.');
-for (const key of ['title', 'version', 'summary']) if (typeof metadata[key] !== 'string' || !metadata[key].trim()) throw new Error(`extension.json requires ${key}.`);
+const metadata = validateConfig(JSON.parse(await readFile(new URL('../extension.json', import.meta.url), 'utf8')));
+const contract = createPackageManifest(metadata);
 
 await build();
 const files = await readdir(new URL('../dist/', import.meta.url));
 if (files.length !== 1 || files[0] !== 'plugin.js') throw new Error('The installer expects one self-contained dist/plugin.js bundle.');
 const bundle = await readFile(new URL('../dist/plugin.js', import.meta.url));
 const manifest = {
-  apiVersion: 1,
-  id: metadata.id,
+  apiVersion: 2,
+  ...contract,
   title: metadata.title,
-  version: metadata.version,
   summary: metadata.summary,
   entry: 'dist/plugin.js',
   sha256: createHash('sha256').update(bundle).digest('hex'),
-  aspectIds: [`${metadata.id}.note`],
+  aspectIds: contract.provides.aspects,
   capabilities: {
     readAspects: [`${metadata.id}.note`, 'core.transform', 'core.bounds'],
     writeAspects: [`${metadata.id}.note`, 'core.transform', 'core.bounds'],

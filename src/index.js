@@ -1,7 +1,8 @@
 import metadata from '../extension.json';
+import { createPackageManifest } from './manifest.js';
 
-// This example uses the public structural ExtensionSpec contract. It has no
-// runtime SDK import: @alid/kernel is not published to npm yet.
+// This example uses the public ExtensionPackageSpec structural contract.
+// Optional SDK imports are shared by the host, not bundled or installed from npm.
 const aspectId = `${metadata.id}.note`;
 const addNoteCommand = `${metadata.id}:add-note`;
 const defaults = { title: '작은 생각', body: '이 메모를 선택하고 속성에서 내용을 바꿔 보세요.', color: '#f5f3ff' };
@@ -65,7 +66,7 @@ const note = {
 };
 
 export default {
-  id: metadata.id,
+  ...createPackageManifest(metadata),
   summary: metadata.summary,
   aspects: [note],
   ui: {
@@ -75,12 +76,18 @@ export default {
     const creation = context.services.get('canvas.creation');
     if (!creation) throw new Error('스티키 노트에는 canvas.creation 호스트 서비스가 필요합니다.');
     // Activation adds behavior only; installation never creates document data.
-    return context.commands.register({
+    let active = true;
+    const addNote = () => {
+      if (!active) throw new Error('스티키 노트 확장이 비활성화되었습니다. 공개 API를 다시 조회하세요.');
+      return creation.create({ caller: addNoteCommand, aspects: { [aspectId]: { ...defaults } }, width: 240, height: 160 });
+    };
+    const offCommand = context.commands.register({
       id: addNoteCommand,
       title: '스티키 노트 추가',
       summary: '현재 캔버스 중앙에 메모를 추가합니다.',
       shortcutScope: 'canvas',
-      run: () => creation.create({ caller: addNoteCommand, aspects: { [aspectId]: { ...defaults } }, width: 240, height: 160 }),
+      run: addNote,
     });
+    return { api: Object.freeze({ addNote }), dispose() { if (!active) return; active = false; offCommand(); } };
   },
 };

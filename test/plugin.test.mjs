@@ -9,8 +9,12 @@ const aspect = plugin.aspects[0];
 const geometry = { x: 24, y: 32, width: 240, height: 160, rotation: 0.5, zOrder: 10 };
 
 test('the committed install manifest identifies and hashes the built module', async () => {
-  assert.equal(manifest.apiVersion, 1);
+  assert.equal(manifest.apiVersion, 2);
   assert.equal(manifest.id, plugin.id);
+  for (const key of ['version', 'engine', 'dependencies', 'optionalDependencies', 'conflicts', 'provides']) assert.deepEqual(manifest[key], plugin[key], `Reviewed ${key} must match the runtime package.`);
+  assert.equal(manifest.version, '0.2.0');
+  assert.equal(manifest.engine, '^0.1.0');
+  assert.deepEqual(manifest.provides.aspects, manifest.aspectIds);
   assert.deepEqual(manifest.aspectIds, plugin.aspects.map(item => item.id));
   assert.equal(manifest.entry, 'dist/plugin.js');
   const bytes = await readFile(new URL('../dist/plugin.js', import.meta.url));
@@ -19,7 +23,7 @@ test('the committed install manifest identifies and hashes the built module', as
 
 test('activation registers a command, creation is explicit, disposal unregisters it', () => {
   let command, created, removed = 0;
-  const dispose = plugin.activate({
+  const { api, dispose } = plugin.activate({
     services: { get: name => name === 'canvas.creation' ? { create: request => { created = request; return 'new-note'; } } : undefined },
     commands: { register: value => { command = value; return () => { removed++; }; } },
   });
@@ -28,8 +32,13 @@ test('activation registers a command, creation is explicit, disposal unregisters
   assert.equal(command.run(), 'new-note');
   assert.deepEqual(created, { caller: command.id, aspects: { [aspect.id]: aspect.defaults }, width: 240, height: 160 });
   assert.equal(Object.hasOwn(created.aspects, 'core.transform'), false);
+  created = undefined;
+  assert.equal(api.addNote(), 'new-note');
+  assert.ok(created);
+  dispose();
   dispose();
   assert.equal(removed, 1);
+  assert.throws(() => api.addNote(), /비활성화/);
 });
 
 test('the toolbar points to the same creation command without requiring selection', () => {

@@ -1,9 +1,34 @@
 var extension_default = {
 	id: "example.sticky-notes",
 	title: "스티키 노트",
-	version: "0.1.0",
-	summary: "캔버스에 짧은 메모를 추가하고 내용과 색상을 편집합니다."
+	version: "0.2.0",
+	summary: "캔버스에 짧은 메모를 추가하고 내용과 색상을 편집합니다.",
+	engine: "^0.1.0",
+	dependencies: {},
+	optionalDependencies: {},
+	conflicts: [],
+	provides: {
+		"services": [],
+		"hsmSlots": []
+	}
 };
+// src/manifest.js
+/** Shared by the bundle and build script; keep the reviewed and executed contracts identical. */
+function createPackageManifest(metadata) {
+	return {
+		id: metadata.id,
+		version: metadata.version,
+		engine: metadata.engine,
+		dependencies: { ...metadata.dependencies },
+		optionalDependencies: { ...metadata.optionalDependencies },
+		conflicts: [...metadata.conflicts],
+		provides: {
+			services: [...metadata.provides.services],
+			aspects: [`${metadata.id}.note`],
+			hsmSlots: [...metadata.provides.hsmSlots]
+		}
+	};
+}
 // src/index.js
 var aspectId = `${extension_default.id}.note`;
 var addNoteCommand = `${extension_default.id}:add-note`;
@@ -96,7 +121,7 @@ var note = {
 	] }
 };
 var src_default = {
-	id: extension_default.id,
+	...createPackageManifest(extension_default),
 	summary: extension_default.summary,
 	aspects: [note],
 	ui: { controls: [{
@@ -111,18 +136,31 @@ var src_default = {
 	activate(context) {
 		const creation = context.services.get("canvas.creation");
 		if (!creation) throw new Error("스티키 노트에는 canvas.creation 호스트 서비스가 필요합니다.");
-		return context.commands.register({
-			id: addNoteCommand,
-			title: "스티키 노트 추가",
-			summary: "현재 캔버스 중앙에 메모를 추가합니다.",
-			shortcutScope: "canvas",
-			run: () => creation.create({
+		let active = true;
+		const addNote = () => {
+			if (!active) throw new Error("스티키 노트 확장이 비활성화되었습니다. 공개 API를 다시 조회하세요.");
+			return creation.create({
 				caller: addNoteCommand,
 				aspects: { [aspectId]: { ...defaults } },
 				width: 240,
 				height: 160
-			})
+			});
+		};
+		const offCommand = context.commands.register({
+			id: addNoteCommand,
+			title: "스티키 노트 추가",
+			summary: "현재 캔버스 중앙에 메모를 추가합니다.",
+			shortcutScope: "canvas",
+			run: addNote
 		});
+		return {
+			api: Object.freeze({ addNote }),
+			dispose() {
+				if (!active) return;
+				active = false;
+				offCommand();
+			}
+		};
 	}
 };
 export { src_default as default };
