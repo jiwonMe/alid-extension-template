@@ -1,0 +1,6 @@
+{
+  "id": "example.sticky-notes",
+  "title": "스티키 노트",
+  "version": "0.1.0",
+  "summary": "캔버스에 짧은 메모를 추가하고 내용과 색상을 편집합니다."
+}
