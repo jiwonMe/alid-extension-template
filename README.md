@@ -21,11 +21,30 @@ pnpm install --frozen-lockfile
 pnpm test
 ```
 
-4. `src/index.js`를 수정하고 `pnpm test`를 다시 실행합니다.
+4. `pnpm dev`로 개발 서버를 켜고 alid에 연결한 뒤 `src/index.js`를 수정합니다. 저장할 때마다 캔버스에 바로 반영됩니다([아래](#watch-모드로-개발하기)). 마무리 전에 `pnpm test`를 실행합니다.
 5. 소스와 함께 **`dist/plugin.js`, `alid.extension.json`**을 커밋하고 기본 브랜치에 푸시합니다. `pnpm-lock.yaml`도 커밋해야 합니다.
 6. alid에서 새 `owner/repo`를 입력해 설치합니다. 별도의 웹 호스팅이나 npm 배포는 필요하지 않습니다.
 
 예제의 공개 설치본과 새 저장소를 동시에 설치하려면 먼저 `id`를 바꾸세요. 기존 사용자에게 업데이트할 때는 `id`와 어스펙트 ID를 유지하고 `version`을 올립니다. 파괴적인 스키마 변경은 새 어스펙트 ID를 사용해야 합니다.
+
+## watch 모드로 개발하기
+
+```sh
+pnpm dev               # http://127.0.0.1:5174
+pnpm test:watch        # 다른 터미널에서 계약 테스트를 저장할 때마다 실행
+```
+
+1. `pnpm dev`가 표시한 주소를 alid의 **확장 관리 → 개발 중인 확장 연결**에 입력하고, 실행을 허용한 뒤 **연결**을 누릅니다.
+2. `src/`를 저장하면 다시 빌드되고, alid가 새 코드를 받아 그 자리에서 교체합니다. 캔버스의 노트와 Undo 기록은 그대로 남습니다. 확장 목록에는 `개발` 표시와 빌드 번호(#2, #3…)가 나타납니다.
+3. 빌드에 실패하면 오류가 연결 카드에 표시되고, **마지막으로 성공한 빌드가 계속 실행**됩니다. 고치고 저장하면 다시 반영됩니다.
+4. 끝나면 **연결 끊기**를 누르거나 새로고침합니다. 개발 코드는 저장되지 않으며, 다음에 열 때 마지막 주소만 미리 채워집니다.
+
+개발 서버는 GitHub 설치와 같은 매니페스트·SHA256·패키지 계약 검증을 거칩니다. 그래서 개발 중에 동작하면 배포 후에도 같은 경로로 설치됩니다. 개발 빌드는 무시되는 `.alid-dev/`에 만들어지므로 커밋할 `dist/plugin.js`와 `alid.extension.json`은 `pnpm build` 전까지 바뀌지 않습니다.
+
+- **연결 규칙:** 이 컴퓨터의 주소(`localhost`, `127.0.0.1`)만 연결할 수 있습니다. 개발 서버는 `127.0.0.1`에서만 열리고, alid 기본 주소(`http://127.0.0.1:5173`, `http://localhost:5173`)의 요청만 받습니다. 다른 주소의 alid를 쓰면 `pnpm dev --origin https://alid.example`로 추가하세요. 포트는 `--port`로 바꿉니다.
+- **ID 고정:** 개발 중에는 확장 ID를 바꿀 수 없습니다. ID를 바꿨다면 연결을 끊고 다시 연결하세요. 같은 ID의 확장이 GitHub에서 이미 설치되어 있으면 먼저 제거해야 합니다.
+- **교체 범위:** 다시 불러올 때 `activate`가 반환한 정리 함수가 먼저 호출됩니다. 명령·구독·타이머를 그 안에서 정리하지 않으면 교체할 때마다 중복됩니다.
+- **스키마 변경:** 이미 만든 객체의 어스펙트 ID와 속성 이름은 유지하세요. 기본값(`defaults`)과 렌더링은 자유롭게 바꿔도 됩니다.
 
 ## 파일 구성
 
@@ -36,9 +55,12 @@ pnpm test
 | `src/index.js` | 공개 `ExtensionPackageSpec` 구조를 따르는 예제 |
 | `vite.config.js` | 단일 ESM 번들 생성과 호스트 공유 모듈 외부화 |
 | `scripts/build.mjs` | 빌드와 설치 manifest·SHA256 생성 |
+| `scripts/dev.mjs` | watch 빌드와 alid 연결용 로컬 개발 서버(`pnpm dev`) |
+| `scripts/install-manifest.mjs` | build와 dev가 함께 쓰는 설치 manifest 생성 |
 | `dist/plugin.js` | 브라우저가 설치하는 코드, Git에 포함 |
 | `alid.extension.json` | 설치 명세, Git에 포함 |
 | `test/plugin.test.mjs` | 무결성·생성·해제·순수 파생·출판 검증 |
+| `test/dev-server.test.mjs` | 변경 시 재빌드·해시 일치·reload 이벤트·출처 제한 검증 |
 | `.github/workflows/check.yml` | 테스트 및 커밋된 산출물 최신 여부 확인 |
 
 ## 설치 명세

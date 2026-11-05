@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 export const sharedImports = ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-dom', 'react-dom/client', '@alid/react', '@alid/kernel'];
@@ -22,7 +23,7 @@ export default defineConfig({
     target: 'es2022',
     minify: false,
     sourcemap: false,
-    lib: { entry: 'src/index.js', formats: ['es'], fileName: () => 'plugin.js' },
+    lib: { entry: fileURLToPath(new URL('src/index.js', import.meta.url)), formats: ['es'], fileName: () => 'plugin.js' },
     // One ESM file plus exact shared host imports; Blob URLs cannot resolve ./chunks.
     rolldownOptions: { external: id => shared.has(id), output: { codeSplitting: false } },
   },
