@@ -1,7 +1,7 @@
 {
   "apiVersion": 2,
   "id": "example.sticky-notes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "engine": "^0.1.0",
   "dependencies": {},
   "optionalDependencies": {},
@@ -16,7 +16,7 @@
   "title": "스티키 노트",
   "summary": "캔버스에 짧은 메모를 추가하고 내용과 색상을 편집합니다.",
   "entry": "dist/plugin.js",
-  "sha256": "79f1be9ff414282fd8fffe28492c4796b181a5dfccaafd3ae819bb143a19781c",
+  "sha256": "8e026cb824762fd73a0923abeda72ae2b3d9cef910ee56d2210cfd60008ff7a9",
   "aspectIds": [
     "example.sticky-notes.note"
   ],

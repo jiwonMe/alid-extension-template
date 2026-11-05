@@ -6,13 +6,13 @@ import plugin from '../dist/plugin.js';
 
 const manifest = JSON.parse(await readFile(new URL('../alid.extension.json', import.meta.url), 'utf8'));
 const aspect = plugin.aspects[0];
-const geometry = { x: 24, y: 32, width: 240, height: 160, rotation: 0.5, zOrder: 10 };
+const geometry = { x: 24, y: 32, width: 240, height: 160, rotation: 0.5 };
 
 test('the committed install manifest identifies and hashes the built module', async () => {
   assert.equal(manifest.apiVersion, 2);
   assert.equal(manifest.id, plugin.id);
   for (const key of ['version', 'engine', 'dependencies', 'optionalDependencies', 'conflicts', 'provides']) assert.deepEqual(manifest[key], plugin[key], `Reviewed ${key} must match the runtime package.`);
-  assert.equal(manifest.version, '0.2.0');
+  assert.equal(manifest.version, '0.3.0');
   assert.equal(manifest.engine, '^0.1.0');
   assert.deepEqual(manifest.provides.aspects, manifest.aspectIds);
   assert.deepEqual(manifest.aspectIds, plugin.aspects.map(item => item.id));
@@ -58,13 +58,15 @@ test('derive reads canonical intent and never writes or changes it', () => {
 
 test('derive remains finite when imported bounds are missing or invalid', () => {
   const derived = aspect.derive(aspect.defaults, 'note-1', { getCanonical: () => ({ x: Infinity, y: NaN, rotation: Infinity, width: -10, height: NaN }) });
-  assert.deepEqual(derived, { x: 0, y: 0, width: 240, height: 160, rotation: 0, zOrder: 10 });
+  assert.deepEqual(derived, { x: 0, y: 0, width: 240, height: 160, rotation: 0 });
 });
 
 test('DOM and SVG render escaped text, validate colors and never need a mounted editor', () => {
   const props = { title: '"><script>alert(1)</script>', body: '<img src=x onerror=alert(1)>', color: 'url(https://example.invalid/pixel)' };
   const rendered = aspect.renderSvg(props, geometry, 'offscreen-note');
-  assert.equal(rendered.layer, 'underlay');
+  // Paint order comes from the host's single z-axis; renderers return SVG only.
+  assert.deepEqual(Object.keys(rendered), ['svg']);
+  assert.equal(Object.hasOwn(aspect.derive(aspect.defaults, 'n', { getCanonical: () => undefined }), 'zOrder'), false);
   assert.match(rendered.svg, /translate\(24,32\) rotate\(/);
   assert.ok(rendered.svg.includes('&lt;script&gt;'));
   assert.ok(!rendered.svg.includes('<script>'));

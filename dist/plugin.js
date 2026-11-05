@@ -1,7 +1,7 @@
 var extension_default = {
 	id: "example.sticky-notes",
 	title: "스티키 노트",
-	version: "0.2.0",
+	version: "0.3.0",
 	summary: "캔버스에 짧은 메모를 추가하고 내용과 색상을 편집합니다.",
 	engine: "^0.1.0",
 	dependencies: {},
@@ -55,8 +55,7 @@ function derive(_props, id, view) {
 		y: finite(transform.y, 0),
 		width: positive(bounds.width, 240),
 		height: positive(bounds.height, 160),
-		rotation: finite(transform.rotation, 0),
-		zOrder: 10
+		rotation: finite(transform.rotation, 0)
 	};
 }
 function noteBody(props, geometry) {
@@ -86,15 +85,9 @@ var note = {
 		content.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="${geometry.height}" viewBox="0 0 ${geometry.width} ${geometry.height}" role="img" aria-label="${escapeXml(props.title ?? "스티키 노트")}" style="display:block;user-select:none;pointer-events:none">${noteBody(props, geometry)}</svg>`;
 	},
 	renderSvg(props, geometry) {
-		if (!geometry) return {
-			layer: "underlay",
-			svg: ""
-		};
+		if (!geometry) return { svg: "" };
 		const { x, y, width, height, rotation } = geometry;
-		return {
-			layer: "underlay",
-			svg: `<g transform="translate(${x},${y}) rotate(${rotation * 180 / Math.PI},${width / 2},${height / 2})">${noteBody(props, geometry)}</g>`
-		};
+		return { svg: `<g transform="translate(${x},${y}) rotate(${rotation * 180 / Math.PI},${width / 2},${height / 2})">${noteBody(props, geometry)}</g>` };
 	},
 	ui: { controls: [
 		{

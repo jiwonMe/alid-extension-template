@@ -9,7 +9,7 @@
 ```js
 export default {
   id: 'yourname.reading-notes',
-  version: '0.2.0',
+  version: '0.3.0',
   engine: '^0.1.0',
   dependencies: {},
   optionalDependencies: {},
@@ -45,7 +45,7 @@ export default {
   version: '0.1.0',
   engine: '^0.1.0',
   summary: '필요할 때 스티키 노트를 추가합니다.',
-  dependencies: { 'yourname.reading-notes': '^0.2.0' },
+  dependencies: { 'yourname.reading-notes': '^0.3.0' },
   optionalDependencies: { 'sys.minibuffer': '^0.1.0' },
   conflicts: [],
   provides: { services: [], aspects: [], hsmSlots: [] },
@@ -103,12 +103,25 @@ return { api: { addNote }, dispose: release };
 | `dependsOnComputed` | 파생 계산이 읽는 다른 파생값 목록. 이 예제는 빈 배열 |
 | `derive(props, entityId, view)` | 정본을 읽어 화면용 기하를 반환하는 순수 함수 |
 | `renderDom(content, props, derived, entityId)` | 호스트가 준 콘텐츠 컨테이너에 표시 |
-| `renderSvg(props, derived, entityId)` | `{ layer: 'underlay' 또는 'overlay', svg: 문자열 }` 반환 |
+| `renderSvg(props, derived, entityId)` | `{ svg: 문자열 }` 반환. 그리기 순서는 호스트가 정합니다 |
+| `layout` (선택) | `true`이면 `derive` 결과가 객체의 공용 레이아웃 박스가 됩니다. 자동 크기 객체용 |
+| `paintBounds(derived)` (선택) | `core.bounds` 박스가 없는 객체(연결선·자유 곡선 등)가 그리는 월드 박스 `{ x, y, width, height }` |
 | `ui.controls` | 이 어스펙트의 속성을 편집하는 선언형 컨트롤 |
 
 `derive`의 `view.getCanonical(entityId, aspectId)`는 해당 객체의 저장된 어스펙트를 읽으며 없으면 `undefined`를 반환합니다. 예제는 `core.transform`의 `x`, `y`, `rotation`과 `core.bounds`의 `width`, `height`를 읽습니다. 회전 값은 라디안입니다. 높이가 없으면 예제 자체의 결정론적인 기본값을 사용합니다.
 
-예제의 파생 객체는 `{ x, y, width, height, rotation, zOrder }`입니다. 이 값은 화면과 출판을 위해 계산할 뿐 `defaults`나 문서에 다시 저장하지 않습니다. 파생 함수 안에서는 문서 쓰기, DOM 접근, 네트워크 요청을 하지 마세요.
+예제의 파생 객체는 `{ x, y, width, height, rotation }`입니다. 이 값은 화면과 출판을 위해 계산할 뿐 `defaults`나 문서에 다시 저장하지 않습니다. 파생 함수 안에서는 문서 쓰기, DOM 접근, 네트워크 요청을 하지 마세요.
+
+### 그리기 순서와 화면 영역
+
+모든 문서 객체는 하나의 z축에 쌓입니다. 순서는 정본 `core.stacking` 어스펙트의 분수 인덱스로 저장되며, 호스트가 DOM·SVG 출판·선택 판정·공간 인덱스에 같은 순위를 적용합니다. 새로 만든 객체는 맨 위에 놓이고, 사용자는 **앞으로 가져오기/뒤로 보내기** 명령으로 순서를 바꿉니다. 그래서 확장은 `zOrder`나 `layer`를 반환하거나 `core.stacking`을 직접 쓰지 않습니다. 이전 템플릿의 `layer: 'underlay' | 'overlay'`는 더 이상 쓰지 않습니다.
+
+컬링·전체 보기·공간 인덱스에는 호스트가 계산하는 `computed.effectiveBounds`가 쓰입니다. `core.transform`·`core.bounds`가 있는 객체는 따로 할 일이 없습니다. 박스가 없는 객체는 `paintBounds(derived)`로 그리는 영역을 알려 주세요. 그래야 화면 밖에서 잘리거나 전체 보기에서 빠지지 않습니다. `@alid/kernel`을 import하는 확장은 `readLayoutBounds(view, id)`·`readEffectiveBounds(view, id)`로 다른 객체의 박스를 읽을 수 있습니다.
+
+```js
+// 박스 없는 선형 객체의 예
+paintBounds: line => line && { x: Math.min(line.x1, line.x2) - 2, y: Math.min(line.y1, line.y2) - 2, width: Math.abs(line.x2 - line.x1) + 4, height: Math.abs(line.y2 - line.y1) + 4 },
+```
 
 DOM 콜백은 **안쪽 콘텐츠만** 소유합니다. 바깥 컨테이너의 좌표·회전·카메라 변환은 호스트가 처리합니다. 콘텐츠에 이벤트나 구독을 만들었다면 `renderDom`에서도 정리 함수를 반환할 수 있습니다. 시각 객체는 DOM이 없어도 내보낼 수 있도록 SVG 경로를 함께 제공하세요. SVG 문자열의 사용자 입력은 이스케이프하고 색상 등 속성값도 검증해야 합니다.
 

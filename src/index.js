@@ -11,13 +11,15 @@ const colorOf = value => /^#[a-f\d]{6}$/i.test(value) ? value : defaults.color;
 const finite = (value, fallback) => Number.isFinite(value) ? value : fallback;
 const positive = (value, fallback) => Number.isFinite(value) && value > 0 ? value : fallback;
 
+// Paint order is not geometry: the host stacks every object on one z-axis
+// (`core.stacking`) and puts newly created notes on top.
 function derive(_props, id, view) {
   const transform = view.getCanonical(id, 'core.transform') ?? {};
   const bounds = view.getCanonical(id, 'core.bounds') ?? {};
   return {
     x: finite(transform.x, 0), y: finite(transform.y, 0),
     width: positive(bounds.width, 240), height: positive(bounds.height, 160),
-    rotation: finite(transform.rotation, 0), zOrder: 10,
+    rotation: finite(transform.rotation, 0),
   };
 }
 
@@ -49,10 +51,9 @@ const note = {
     content.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="${geometry.height}" viewBox="0 0 ${geometry.width} ${geometry.height}" role="img" aria-label="${escapeXml(props.title ?? '스티키 노트')}" style="display:block;user-select:none;pointer-events:none">${noteBody(props, geometry)}</svg>`;
   },
   renderSvg(props, geometry) {
-    if (!geometry) return { layer: 'underlay', svg: '' };
+    if (!geometry) return { svg: '' };
     const { x, y, width, height, rotation } = geometry;
     return {
-      layer: 'underlay',
       svg: `<g transform="translate(${x},${y}) rotate(${rotation * 180 / Math.PI},${width / 2},${height / 2})">${noteBody(props, geometry)}</g>`,
     };
   },

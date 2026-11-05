@@ -50,7 +50,7 @@ pnpm test
   "apiVersion": 2,
   "id": "yourname.reading-notes",
   "title": "Reading notes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "engine": "^0.1.0",
   "dependencies": {},
   "optionalDependencies": {},
